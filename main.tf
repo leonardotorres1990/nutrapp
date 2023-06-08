@@ -154,7 +154,7 @@ resource "aws_instance" "web_server" {                                     # BLO
     sudo vi /etc/apache2/sites-available/wordpress.conf
     # Añade lo siguiente al archivo wordpress.conf
 #      <VirtualHost *:80>
-#     ServerName your_domain_or_IP_address
+#     ServerName ip de la instancia ec2
 #     DocumentRoot /var/www/html/wordpress
 #     <Directory /var/www/html/wordpress/>
 #         Options FollowSymlinks
