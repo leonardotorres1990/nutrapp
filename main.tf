@@ -133,48 +133,21 @@ resource "aws_nat_gateway" "nat_gateway" {
   }
 }
 
-# Terraform Resource Block - To Build EC2 instance in Public Subnet
-resource "aws_instance" "web_server" {                                     # BLOCK
-  ami                    = data.aws_ami.ubuntu.id                          # Argument with data expression
-  instance_type          = "t2.micro"                                      # Argument
-  subnet_id              = aws_subnet.public_subnets["public_subnet_1"].id # Argument with value as expression
+# Terraform Resource Block - To Build EC2 instance in public Subnet
+resource "aws_instance" "web_server" {                                     
+  ami                    = data.aws_ami.ubuntu.id                          
+  instance_type          = "t2.micro"                                      
+  subnet_id              = aws_subnet.public_subnets["public_subnet_1"].id 
   key_name               = aws_key_pair.ssh_key_pair.key_name
   vpc_security_group_ids = values(aws_security_group.ec2_sg)[*].id
-  user_data              = <<-EOF
-    #!/bin/bash
-    sudo apt update
-    sudo apt upgrade -y
-    sudo apt install apache2 php libapache2-mod-php php-mysql -y
-    cd /tmp
-    wget https://wordpress.org/latest.tar.gz
-    tar -xf latest.tar.gz
-    sudo mv wordpress /var/www/html/
-    sudo chown -R www-data:www-data /var/www/html/wordpress
-    sudo chmod -R 755 /var/www/html/wordpress
-    sudo vi /etc/apache2/sites-available/wordpress.conf
-    # Añade lo siguiente al archivo wordpress.conf
-#      <VirtualHost *:80>
-#     ServerName ip de la instancia ec2
-#     DocumentRoot /var/www/html/wordpress
-#     <Directory /var/www/html/wordpress/>
-#         Options FollowSymlinks
-#         AllowOverride All
-#         Require all granted
-#     </Directory>
-#     ErrorLog ${APACHE_LOG_DIR}/error.log
-#     CustomLog ${APACHE_LOG_DIR}/access.log combined
-# </VirtualHost>
-    sudo a2ensite wordpress.conf
-    sudo a2enmod rewrite
-    sudo systemctl restart apache
-  EOF
+
 
   tags = {
     Name = "Web EC2 Server"
   }
 }
 
-# Definición del grupo de seguridad de EC2
+# EC2 Security group
 resource "aws_security_group" "ec2_sg" {
   name        = "EC2_SG-${each.key}"
   description = "Grupo de seguridad para EC2"
@@ -206,13 +179,13 @@ resource "aws_security_group" "ec2_sg" {
   }
 }
 
-# Creación de llave ssh
+# SSH Key assingment
 resource "aws_key_pair" "ssh_key_pair" {
   key_name   = "ssh_key"
   public_key = file("ssh_key.pub")
 }
 
-# Definición de la base de datos en RDS
+# RDS MySQL Data Base
 resource "aws_db_instance" "rds_instance" {
   engine                 = "mysql"
   instance_class         = "db.t2.micro"
@@ -229,7 +202,7 @@ resource "aws_db_instance" "rds_instance" {
   }
 }
 
-# Definición del grupo de subredes de RDS
+# Subnet group RDS
 resource "aws_db_subnet_group" "db_subnet_group" {
   name       = "db_subnet_group"
   subnet_ids = values(aws_subnet.private_subnets)[*].id
@@ -238,7 +211,7 @@ resource "aws_db_subnet_group" "db_subnet_group" {
   }
 }
 
-# Definición del grupo de seguridad de RDS
+# RDS Security Group
 resource "aws_security_group" "rds_sg" {
   name        = "RDS_SG"
   description = "Grupo de seguridad para RDS"
@@ -250,14 +223,6 @@ resource "aws_security_group" "rds_sg" {
     protocol        = "tcp"
     security_groups = values(aws_security_group.ec2_sg)[*].id
   }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   lifecycle {
     create_before_destroy = true
   }
@@ -267,7 +232,7 @@ resource "aws_security_group" "rds_sg" {
   }
 }
 
-# Definición del certificado SSL en ACM
+# SSL certificate ACM
 resource "aws_acm_certificate" "ssl_certificate" {
   domain_name       = "leonardotorresbenitez900608.com" # Reemplaza con tu propio dominio
   validation_method = "DNS"
